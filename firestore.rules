@@ -1,0 +1,147 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isBootstrappedAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == "s6710380101@pkru.ac.th"
+      );
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() || (
+        isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin"
+      );
+    }
+
+    function isModerator() {
+      return isAdmin() || (
+        isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "moderator"
+      );
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Settings (global configurations)
+    match /settings/{settingId} {
+      allow read: if isValidId(settingId);
+      allow write: if isValidId(settingId) && (isAdmin() || isBootstrappedAdmin());
+    }
+
+    // Users
+    match /users/{userId} {
+      allow read: if isValidId(userId);
+      // Create own profile on sign-up (cannot assign admin/moderator unless bootstrapped)
+      allow create: if isValidId(userId) && isOwner(userId) && (
+        incoming().role == "member" || (incoming().role in ["admin", "moderator"] && isBootstrappedAdmin())
+      );
+      // Update own non-role profile fields, or Admin can update anything (including roles/status)
+      allow update: if isValidId(userId) && (
+        isAdmin() ||
+        (
+          isOwner(userId) &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'bio', 'photoURL', 'updatedAt'])
+        )
+      );
+      allow delete: if isValidId(userId) && isAdmin();
+    }
+
+    // Resources
+    match /resources/{resourceId} {
+      // Anyone can read published resources, or author/moderator can read hidden ones
+      allow get: if isValidId(resourceId) && (
+        resource.data.status == "published" ||
+        (isSignedIn() && (resource.data.authorId == request.auth.uid || isModerator()))
+      );
+      allow list: if resource.data.status == "published" ||
+        (isSignedIn() && (resource.data.authorId == request.auth.uid || isModerator()));
+
+      // Create new resource
+      allow create: if isValidId(resourceId) && isSignedIn() &&
+        incoming().authorId == request.auth.uid &&
+        incoming().title is string && incoming().title.size() <= 200 &&
+        incoming().description is string && incoming().description.size() <= 5000;
+
+      // Update: author can edit content, view counter can be bumped, moderator/admin can edit or hide
+      allow update: if isValidId(resourceId) && isSignedIn() && (
+        // Case 1: Moderator / Admin can update anything or hide
+        isModerator() ||
+        // Case 2: Author updating own post without changing authorId
+        (
+          existing().authorId == request.auth.uid &&
+          incoming().authorId == request.auth.uid &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'title', 'description', 'category', 'educationLevel', 'mediaType', 'url', 'tags', 'updatedAt'
+          ])
+        ) ||
+        // Case 3: Public / User incrementing views or favoritesCount
+        (
+          incoming().diff(existing()).affectedKeys().hasOnly(['viewsCount', 'favoritesCount'])
+        )
+      );
+
+      // Delete: author or moderator
+      allow delete: if isValidId(resourceId) && isSignedIn() && (
+        isModerator() || existing().authorId == request.auth.uid
+      );
+    }
+
+    // Favorites
+    match /favorites/{favoriteId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+      allow create: if isValidId(favoriteId) && isSignedIn() &&
+        incoming().userId == request.auth.uid;
+      allow delete: if isValidId(favoriteId) && isSignedIn() && (
+        existing().userId == request.auth.uid || isAdmin()
+      );
+    }
+
+    // Reports
+    match /reports/{reportId} {
+      allow create: if isValidId(reportId) && isSignedIn() &&
+        incoming().reporterId == request.auth.uid;
+      allow read: if isValidId(reportId) && (
+        isModerator() || (isSignedIn() && resource.data.reporterId == request.auth.uid)
+      );
+      allow list: if isModerator() || (isSignedIn() && resource.data.reporterId == request.auth.uid);
+      allow update, delete: if isValidId(reportId) && isModerator();
+    }
+
+    // Moderation Logs
+    match /moderationLogs/{logId} {
+      allow read: if isModerator();
+      allow create: if isModerator() && incoming().performedBy == request.auth.uid;
+      allow update, delete: if false; // Immutable audit log
+    }
+  }
+}

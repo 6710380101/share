@@ -1,0 +1,324 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with role-based access control and account status",
+      "type": "object",
+      "properties": {
+        "displayName": {
+          "type": "string",
+          "description": "Full display name of user",
+          "maxLength": 100
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of user",
+          "maxLength": 120
+        },
+        "role": {
+          "type": "string",
+          "description": "User privilege role",
+          "enum": ["member", "moderator", "admin"]
+        },
+        "status": {
+          "type": "string",
+          "description": "Account status",
+          "enum": ["active", "suspended"]
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "Avatar URL",
+          "maxLength": 500
+        },
+        "bio": {
+          "type": "string",
+          "description": "Short bio or school affiliation",
+          "maxLength": 300
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Account registration timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Profile last updated timestamp"
+        }
+      },
+      "required": ["displayName", "email", "role", "status"]
+    },
+    "Resource": {
+      "title": "Resource",
+      "description": "Learning material and knowledge content",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Resource title",
+          "maxLength": 200,
+          "minLength": 3
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of content",
+          "maxLength": 3000,
+          "minLength": 5
+        },
+        "category": {
+          "type": "string",
+          "description": "Subject category",
+          "maxLength": 50
+        },
+        "educationLevel": {
+          "type": "string",
+          "description": "Target education grade or level",
+          "maxLength": 50
+        },
+        "mediaType": {
+          "type": "string",
+          "description": "Format of learning media",
+          "enum": ["pdf", "video", "website", "presentation", "document", "other"]
+        },
+        "url": {
+          "type": "string",
+          "description": "Link to external or cloud resource",
+          "maxLength": 1000
+        },
+        "authorId": {
+          "type": "string",
+          "description": "UID of the author who posted",
+          "maxLength": 128
+        },
+        "authorName": {
+          "type": "string",
+          "description": "Display name of the author",
+          "maxLength": 100
+        },
+        "authorEmail": {
+          "type": "string",
+          "description": "Author email",
+          "maxLength": 120
+        },
+        "status": {
+          "type": "string",
+          "description": "Publish status: published or hidden by moderator",
+          "enum": ["published", "hidden"]
+        },
+        "viewsCount": {
+          "type": "number",
+          "description": "View counts"
+        },
+        "favoritesCount": {
+          "type": "number",
+          "description": "Total favorites"
+        },
+        "tags": {
+          "type": "array",
+          "description": "Keywords and tags",
+          "maxLength": 10
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last modification timestamp"
+        }
+      },
+      "required": ["title", "description", "category", "educationLevel", "mediaType", "authorId", "authorName", "status"]
+    },
+    "Favorite": {
+      "title": "Favorite",
+      "description": "User bookmarked resource",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "User ID",
+          "maxLength": 128
+        },
+        "resourceId": {
+          "type": "string",
+          "description": "Target resource ID",
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Time marked favorite"
+        }
+      },
+      "required": ["userId", "resourceId"]
+    },
+    "Report": {
+      "title": "Report",
+      "description": "Resource violation report submitted by user",
+      "type": "object",
+      "properties": {
+        "resourceId": {
+          "type": "string",
+          "description": "Reported resource document ID",
+          "maxLength": 128
+        },
+        "resourceTitle": {
+          "type": "string",
+          "description": "Reported resource title snapshot",
+          "maxLength": 200
+        },
+        "reporterId": {
+          "type": "string",
+          "description": "UID of reporter",
+          "maxLength": 128
+        },
+        "reporterEmail": {
+          "type": "string",
+          "description": "Email of reporter",
+          "maxLength": 120
+        },
+        "reason": {
+          "type": "string",
+          "description": "Reason for report",
+          "enum": ["broken_link", "copyright", "inappropriate", "misleading", "other"]
+        },
+        "details": {
+          "type": "string",
+          "description": "Additional explanation",
+          "maxLength": 1000
+        },
+        "status": {
+          "type": "string",
+          "description": "Resolution status",
+          "enum": ["pending", "resolved", "dismissed"]
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Report timestamp"
+        },
+        "resolvedAt": {
+          "type": "string",
+          "description": "Resolution timestamp"
+        },
+        "resolvedBy": {
+          "type": "string",
+          "description": "UID of moderator resolving the report"
+        }
+      },
+      "required": ["resourceId", "reporterId", "reason", "status"]
+    },
+    "ModerationLog": {
+      "title": "ModerationLog",
+      "description": "Audit trail for administrative moderation actions",
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "description": "Action performed (e.g. hide_resource, delete_resource, update_role, suspend_user)",
+          "maxLength": 50
+        },
+        "targetId": {
+          "type": "string",
+          "description": "Target resource or user ID",
+          "maxLength": 128
+        },
+        "targetType": {
+          "type": "string",
+          "description": "Type of entity (resource, user, report)",
+          "maxLength": 30
+        },
+        "performedBy": {
+          "type": "string",
+          "description": "UID of moderator",
+          "maxLength": 128
+        },
+        "performedByEmail": {
+          "type": "string",
+          "description": "Email of moderator",
+          "maxLength": 120
+        },
+        "details": {
+          "type": "string",
+          "description": "Description of action",
+          "maxLength": 500
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Audit log timestamp"
+        }
+      },
+      "required": ["action", "targetId", "targetType", "performedBy"]
+    },
+    "Setting": {
+      "title": "Setting",
+      "description": "Global website configuration managed by admins",
+      "type": "object",
+      "properties": {
+        "siteName": {
+          "type": "string",
+          "description": "Website title",
+          "maxLength": 100
+        },
+        "siteLogo": {
+          "type": "string",
+          "description": "Logo URL or icon name",
+          "maxLength": 500
+        },
+        "siteDescription": {
+          "type": "string",
+          "description": "Tagline / description",
+          "maxLength": 500
+        },
+        "announcement": {
+          "type": "string",
+          "description": "Site-wide announcement banner text",
+          "maxLength": 500
+        },
+        "announcementActive": {
+          "type": "boolean",
+          "description": "Toggle announcement visibility"
+        },
+        "categories": {
+          "type": "array",
+          "description": "Available knowledge categories list"
+        },
+        "educationLevels": {
+          "type": "array",
+          "description": "Available educational levels list"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last updated timestamp"
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "Admin UID who saved the settings"
+        }
+      },
+      "required": ["siteName"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile with role and account status"
+    },
+    "/resources/{resourceId}": {
+      "schema": "Resource",
+      "description": "Educational knowledge resources submitted by members"
+    },
+    "/favorites/{favoriteId}": {
+      "schema": "Favorite",
+      "description": "User favorite bookmarks indexed as userId_resourceId"
+    },
+    "/reports/{reportId}": {
+      "schema": "Report",
+      "description": "Content reports submitted for moderation"
+    },
+    "/moderationLogs/{logId}": {
+      "schema": "ModerationLog",
+      "description": "Audit logs of administrative actions"
+    },
+    "/settings/{settingId}": {
+      "schema": "Setting",
+      "description": "Global portal configurations (document ID: general)"
+    }
+  }
+}
